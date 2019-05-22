@@ -1,6 +1,6 @@
 <p>
     <a href="https://www.travis-ci.com/zhaoky/fullpage">
-    	<img src="https://travis-ci.com/zhaoky/fullpage.svg?branch=master" alt="Travis CI Status"/>
+      <img src="https://travis-ci.com/zhaoky/fullpage.svg?branch=master" alt="Travis CI Status"/>
     </a>
 <p>
 

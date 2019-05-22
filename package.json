@@ -33,7 +33,7 @@
   },
   "lint-staged": {
     "linters": {
-      "src/**/*": [
+      "**/*": [
         "eclint fix",
         "git add"
       ],
