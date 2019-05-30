@@ -55,6 +55,14 @@ function isObject(obj) {
   return Object.prototype.toString.call(obj) === "[object Object]";
 }
 /**
+ * 是否为函数
+ * @param {Obejct} obj
+ * @return {Boolean}
+ */
+function isFunction(obj) {
+  return Object.prototype.toString.call(obj) === "[object Function]";
+}
+/**
  * 阻止移动端下拉效果
  *
  * @export
@@ -194,6 +202,10 @@ export class Fullpage {
     this.actionEvent = actionEventFn();
 
     this.moving = false;
+    this.isInit = true;
+    this.webkitTransitionEndHandler = null;
+    this.touchMoveHandlerFn = null;
+    this.touchEndHandlerFn = null;
     this.startTouchY = this.disY = this.curIndex = this.oldPageIndex = 0;
 
     this.init();
@@ -212,6 +224,8 @@ export class Fullpage {
 
     this.resetAttr();
 
+    this.isInit = false;
+
     this.rootDom.addEventListener(
       "mousewheel",
       throttleGenerator(this.startWheelHandler.bind(this), mac ? 1200 : 100)
@@ -219,7 +233,7 @@ export class Fullpage {
 
     this.rootDom.addEventListener(
       this.actionEvent.start,
-      this.touchStartHandler
+      this.touchStartHandler.bind(this)
     );
   }
   /**
@@ -297,8 +311,14 @@ export class Fullpage {
     this.startTouchY = Array.from(e.changedTouches)[0].pageY;
     this.oldPageIndex = this.curIndex;
 
-    this.rootDom.addEventListener(this.actionEvent.move, this.touchMoveHandler);
-    this.rootDom.addEventListener(this.actionEvent.end, this.touchEndHandler);
+    this.rootDom.addEventListener(
+      this.actionEvent.move,
+      (this.touchMoveHandlerFn = this.touchMoveHandler.bind(this))
+    );
+    this.rootDom.addEventListener(
+      this.actionEvent.end,
+      (this.touchEndHandlerFn = this.touchEndHandler.bind(this))
+    );
   }
   /**
    * 触摸move事件
@@ -319,8 +339,13 @@ export class Fullpage {
       return;
     }
 
-    this.curIndex =
-      this.disY < 0 ? this.oldPageIndex + 1 : this.oldPageIndex - 1;
+    if (this.disY < 0) {
+      this.curIndex = this.oldPageIndex + 1;
+    } else if (this.disY === 0) {
+      this.curIndex = this.oldPageIndex;
+    } else {
+      this.curIndex = this.oldPageIndex - 1;
+    }
 
     this.nodeList[this.curIndex].classList.add("fp-touch-page");
     this.nodeList[this.curIndex].style.transform = `translateY(${(this.disY < 0
@@ -338,13 +363,27 @@ export class Fullpage {
     if (this.moving) {
       return;
     }
-    Math.abs(this.disY) < 100 ? this.littleBounce() : this.applyPageIndex();
+
+    if (Math.abs(this.disY) < 100) {
+      if (this.disY !== 0) {
+        this.littleBounce();
+      } else {
+        this.resetAttr();
+      }
+    } else {
+      this.applyPageIndex();
+    }
   }
   /**
    * 回弹效果
    *
    */
   littleBounce() {
+    if (this.moving) {
+      return;
+    }
+
+    this.moving = true;
     this.nodeList[this.curIndex].style.transform = "";
     this.nodeList[this.curIndex].style.transition = `transform ${
       this.speedTime
@@ -356,10 +395,12 @@ export class Fullpage {
     this.nodeList[
       this.disY < 0 ? this.curIndex - 1 : this.curIndex + 1
     ].style.transition = `transform ${this.speedTime}s`;
+
     this.curIndex = this.disY > 0 ? this.curIndex + 1 : this.curIndex - 1;
+
     this.nodeList[this.curIndex].addEventListener(
       "webkitTransitionEnd",
-      this.resetAttr.bind(this)
+      (this.webkitTransitionEndHandler = this.resetAttr.bind(this))
     );
   }
   /**
@@ -409,7 +450,7 @@ export class Fullpage {
 
     this.nodeList[this.curIndex].addEventListener(
       "webkitTransitionEnd",
-      this.resetAttr.bind(this)
+      (this.webkitTransitionEndHandler = this.resetAttr.bind(this))
     );
   }
   /**
@@ -423,8 +464,9 @@ export class Fullpage {
     this.applyPageIndex();
   }
   /**
-   * 初始化状态
+   * 状态重置
    *
+   * @memberof Fullpage
    */
   resetAttr() {
     Array.from(this.nodeList).map(item => {
@@ -439,7 +481,10 @@ export class Fullpage {
       item.style.transform = "";
       item.style.transition = "";
 
-      item.removeEventListener("webkitTransitionEnd", this.resetAttr);
+      item.removeEventListener(
+        "webkitTransitionEnd",
+        this.webkitTransitionEndHandler
+      );
     });
 
     this.nodeList[this.curIndex].classList.add("fp-cur-page");
@@ -452,14 +497,21 @@ export class Fullpage {
 
     this.rootDom.removeEventListener(
       this.actionEvent.move,
-      this.touchMoveHandler
+      this.touchMoveHandlerFn
     );
     this.rootDom.removeEventListener(
       this.actionEvent.end,
-      this.touchEndHandler
+      this.touchEndHandlerFn
     );
+
+    this.startTouchY = this.disY = 0;
 
     document.getElementsByClassName("fp-arrow")[0].style.display =
       this.curIndex === this.nodeListLen - 1 ? "none" : "block";
+
+    const slideCallback = this.options.slideCallback;
+    if (!this.isInit && !!slideCallback && isFunction(slideCallback)) {
+      slideCallback(this.curIndex);
+    }
   }
 }
