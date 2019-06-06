@@ -230,7 +230,9 @@ export class Fullpage {
       "mousewheel",
       throttleGenerator(this.startWheelHandler.bind(this), mac ? 1200 : 100)
     );
-
+    if (this.actionEvent.start === "mousedown") {
+      return;
+    }
     this.rootDom.addEventListener(
       this.actionEvent.start,
       this.touchStartHandler.bind(this)
