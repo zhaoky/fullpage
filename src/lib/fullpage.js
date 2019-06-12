@@ -334,21 +334,20 @@ export class Fullpage {
 
     this.disY = Array.from(e.changedTouches)[0].pageY - this.startTouchY; // 为负上滑 为正下滑
 
+    if (this.disY < 0) {
+      this.curIndex = this.oldPageIndex + 1;
+    } else if (this.disY > 0) {
+      this.curIndex = this.oldPageIndex - 1;
+    } else {
+      return;
+    }
+
     if (
       (this.disY < 0 && this.oldPageIndex === this.nodeListLen - 1) ||
       (this.disY > 0 && this.oldPageIndex === 0)
     ) {
       return;
     }
-
-    if (this.disY < 0) {
-      this.curIndex = this.oldPageIndex + 1;
-    } else if (this.disY === 0) {
-      this.curIndex = this.oldPageIndex;
-    } else {
-      this.curIndex = this.oldPageIndex - 1;
-    }
-
     this.nodeList[this.curIndex].classList.add("fp-touch-page");
     this.nodeList[this.curIndex].style.transform = `translateY(${(this.disY < 0
       ? this.rootDom.offsetHeight
@@ -363,6 +362,14 @@ export class Fullpage {
    */
   touchEndHandler() {
     if (this.moving) {
+      return;
+    }
+    if (
+      (this.disY < 0 && this.oldPageIndex === this.nodeListLen - 1) ||
+      (this.disY > 0 && this.oldPageIndex === 0)
+    ) {
+      this.disY < 0 ? --this.curIndex : ++this.curIndex;
+      this.resetAttr();
       return;
     }
 
@@ -384,7 +391,6 @@ export class Fullpage {
     if (this.moving) {
       return;
     }
-
     this.moving = true;
     this.nodeList[this.curIndex].style.transform = "";
     this.nodeList[this.curIndex].style.transition = `transform ${
@@ -413,6 +419,7 @@ export class Fullpage {
     if (this.moving) {
       return;
     }
+
     this.moving = true;
     let promise;
     if (Math.abs(this.curIndex - this.oldPageIndex) > 1) {
