@@ -111,6 +111,15 @@ function createStyle(html) {
   const head = document.getElementsByTagName("head")[0];
   head.appendChild(style);
 }
+/**
+ * 兼容Firefox滚轮事件
+ *
+ * @param {Object} event
+ * @return {Number}
+ */
+function getWheelDelta(event) {
+  return event.wheelDelta || -event.detail * 24;
+}
 // ---------------------------------------
 // ---------------------------------------
 
@@ -226,10 +235,13 @@ export class Fullpage {
 
     this.isInit = false;
 
-    this.rootDom.addEventListener(
-      "mousewheel",
-      throttleGenerator(this.startWheelHandler.bind(this), mac ? 1200 : 100)
-    );
+    ["mousewheel", "DOMMouseScroll"].forEach(item => {
+      this.rootDom.addEventListener(
+        item,
+        throttleGenerator(this.startWheelHandler.bind(this), mac ? 1200 : 100)
+      );
+    });
+
     if (this.actionEvent.start === "mousedown") {
       return;
     }
@@ -289,15 +301,16 @@ export class Fullpage {
    * @param {Event} e
    */
   startWheelHandler(e) {
+    const wheelDelta = getWheelDelta(e);
     if (
       this.moving ||
-      (e.wheelDelta < 0 && this.curIndex === this.nodeListLen - 1) ||
-      (e.wheelDelta > 0 && this.curIndex === 0)
+      (wheelDelta < 0 && this.curIndex === this.nodeListLen - 1) ||
+      (wheelDelta > 0 && this.curIndex === 0)
     ) {
       return;
     }
     this.oldPageIndex = this.curIndex;
-    e.wheelDelta < 0 ? this.curIndex++ : this.curIndex--;
+    wheelDelta < 0 ? this.curIndex++ : this.curIndex--;
     this.applyPageIndex();
   }
   /**
